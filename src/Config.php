@@ -1,17 +1,13 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: vasily
- * Date: 02.10.15
- * Time: 15:49
- */
 
-namespace MivarUtils\Common;
+namespace ConfigOfProject;
 
 
 class Config
 {
     const SPACE = ' ';
+    const LOCAL_PATH_TO_CONFIG = '/config/';
+    const DEFAULT_FILE = 'config.ini';
 
     protected static $instances = [];
 
@@ -21,108 +17,122 @@ class Config
     }
 
     /**
+     * @param string $file
+     *
      * @return array
-     * @throws \Exception
+     * @throws Exception
      */
-    public static function getConfig()
+    public static function getConfig($file = self::DEFAULT_FILE)
     {
+        $config_absolute_file_path = static::getIniPath($file);
 
-        $configAbsoluteFilePath = static::getIniPath();
+        if (!isset(static::$instances[$config_absolute_file_path])) {
 
-        if (!isset(self::$instances[$configAbsoluteFilePath])) {
-
-            if (!file_exists($configAbsoluteFilePath)) {
-                throw new \LogicException("There is no configuration file $configAbsoluteFilePath for this project");
+            if (!file_exists($config_absolute_file_path)) {
+                throw new \ConfigOfProject\Exception("Не найдено конфигурационного файла '$config_absolute_file_path' для данного проекта");
             }
 
-            $array = parse_ini_file($configAbsoluteFilePath, true);
+            $array = parse_ini_file($config_absolute_file_path, true);
 
             if (is_null($array)) {
-                throw new \LogicException("Parse error of a configuration file $configAbsoluteFilePath");
+                throw new \ConfigOfProject\Exception("Ошибка парсинга конфигурационного файла $config_absolute_file_path");
             }
 
-
-            self::$instances[$configAbsoluteFilePath] = self::recursive_parse(self::parse_ini_advanced($array));
+            static::$instances[$config_absolute_file_path] = static::recursiveParse(static::parseIniAdvanced($array));
         }
 
-        return self::$instances[$configAbsoluteFilePath];
+        return static::$instances[$config_absolute_file_path];
     }
 
-    protected static function getIniPath()
+    /**
+     * @param string $file
+     *
+     * @return string
+     */
+    protected static function getIniPath($file)
     {
-
-        return self::getProjectRoot() . '/config/configuration.ini';
+        return static::getProjectRoot() . static::LOCAL_PATH_TO_CONFIG . $file;
     }
 
+    /**
+     * Своебразные метод заточенный под "количество шагов назад" когда данный проект находится в зависимостях другого
+     *
+     * @return string
+     */
     public static function getProjectRoot()
     {
         return __DIR__ . '/../../../../..';
     }
 
-    protected static function recursive_parse($array)
+    /**
+     * @param mixed $data
+     *
+     * @return array
+     */
+    protected static function recursiveParse($data)
     {
-        $returnArray = array();
-        if (is_array($array)) {
-            foreach ($array as $key => $value) {
+        $result_array = [];
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
                 if (is_array($value)) {
-                    $array[$key] = self::recursive_parse($value);
+                    $data[$key] = self::recursiveParse($value);
                 }
                 $x = explode('.', $key);
                 if (!empty($x[1])) {
                     $x = array_reverse($x, true);
-                    if (isset($returnArray[$key])) {
-                        unset($returnArray[$key]);
+                    if (isset($result_array[$key])) {
+                        unset($result_array[$key]);
                     }
-                    if (!isset($returnArray[$x[0]])) {
-                        $returnArray[$x[0]] = array();
+                    if (!isset($result_array[$x[0]])) {
+                        $result_array[$x[0]] = [];
                     }
                     $first = true;
                     foreach ($x as $k => $v) {
                         if ($first === true) {
-                            $b = $array[$key];
+                            $b = $data[$key];
                             $first = false;
                         }
-                        $b = array($v => $b);
+                        $b = [$v => $b];
                     }
-                    $returnArray[$x[0]] = array_merge_recursive($returnArray[$x[0]], $b[$x[0]]);
+                    $result_array[$x[0]] = array_merge_recursive($result_array[$x[0]], $b[$x[0]]);
                 } else {
-                    $returnArray[$key] = $array[$key];
+                    $result_array[$key] = $data[$key];
                 }
             }
         }
-        return $returnArray;
+        return $result_array;
     }
 
-    protected static function parse_ini_advanced($array)
+    protected static function parseIniAdvanced($data)
     {
-        $returnArray = array();
-        if (is_array($array)) {
-            foreach ($array as $key => $value) {
+        $result_array = [];
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
                 $e = explode(':', $key);
                 if (!empty($e[1])) {
-                    $x = array();
+                    $x = [];
                     foreach ($e as $tk => $tv) {
                         $x[$tk] = trim($tv);
                     }
                     $x = array_reverse($x, true);
                     foreach ($x as $k => $v) {
                         $c = $x[0];
-                        if (empty($returnArray[$c])) {
-                            $returnArray[$c] = array();
+                        if (empty($result_array[$c])) {
+                            $result_array[$c] = [];
                         }
-                        if (isset($returnArray[$x[1]])) {
-                            $returnArray[$c] = array_merge($returnArray[$c], $returnArray[$x[1]]);
+                        if (isset($result_array[$x[1]])) {
+                            $result_array[$c] = array_merge($result_array[$c], $result_array[$x[1]]);
                         }
                         if ($k === 0) {
-                            $returnArray[$c] = array_merge($returnArray[$c], $array[$key]);
+                            $result_array[$c] = array_merge($result_array[$c], $data[$key]);
                         }
                     }
                 } else {
-                    $returnArray[$key] = $array[$key];
+                    $result_array[$key] = $data[$key];
                 }
             }
         }
-        return $returnArray;
+        return $result_array;
     }
 
     /**
@@ -130,9 +140,10 @@ class Config
      * @param string $dbname
      * @param string $user
      * @param string $password
+     *
      * @return string
      */
-    public static function build_connection_string($host, $dbname, $user = null, $password = null, $port = null)
+    public static function buildConnectionString($host, $dbname, $user = null, $password = null, $port = null)
     {
         assert(is_string($host));
         assert(is_string($dbname));
@@ -165,24 +176,12 @@ class Config
      * @param string $host
      * @param string $port
      * @param string $dbname
+     *
      * @return string
      */
-    public static function build_connection_url($protocol, $user, $password, $host, $port, $dbname)
+    public static function buildConnectionUrl($protocol, $user, $password, $host, $port, $dbname)
     {
         return "$protocol://$user:$password@$host:$port/$dbname";
     }
 
-    /**
-     * @return string
-     */
-    public static function getDefaultCacheDir()
-    {
-        $dir = static::getProjectRoot() . '/cache';
-
-        if (!is_dir($dir)) {
-            throw new \LogicException("must be directory " . var_export($dir, 1));
-        }
-
-        return $dir;
-    }
 }
