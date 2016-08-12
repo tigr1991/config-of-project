@@ -2,7 +2,11 @@
 
 namespace ConfigOfProject;
 
-
+/**
+ * Основной файл конфигурации. Точка входа.
+ *
+ * Class Config
+ */
 class Config
 {
     const SPACE = ' ';
@@ -11,20 +15,35 @@ class Config
 
     protected static $instances = [];
 
+
+    /**
+     * @return static
+     */
+    public static function create()
+    {
+        return new static();
+    }
+
+    /**
+     * Config constructor.
+     */
     protected function __construct()
     {
 
     }
 
     /**
+     * Метод реализован НЕ статичным чтобы иметь возможность тестировать
+     *
      * @param string $file
      *
      * @return array
      * @throws Exception
      */
-    public static function getConfig($file = self::DEFAULT_FILE)
+    public function getConfig($file = self::DEFAULT_FILE)
     {
-        $config_absolute_file_path = static::getIniPath($file);
+
+        $config_absolute_file_path = $this->getIniPath($file);
 
         if (!isset(static::$instances[$config_absolute_file_path])) {
 
@@ -34,11 +53,7 @@ class Config
 
             $array = parse_ini_file($config_absolute_file_path, true);
 
-            if (is_null($array)) {
-                throw new \ConfigOfProject\Exception("Ошибка парсинга конфигурационного файла $config_absolute_file_path");
-            }
-
-            static::$instances[$config_absolute_file_path] = static::recursiveParse(static::parseIniAdvanced($array));
+            static::$instances[$config_absolute_file_path] = $this->parse($array);
         }
 
         return static::$instances[$config_absolute_file_path];
@@ -49,7 +64,7 @@ class Config
      *
      * @return string
      */
-    protected static function getIniPath($file)
+    protected function getIniPath($file)
     {
         return static::getProjectRoot() . static::LOCAL_PATH_TO_CONFIG . $file;
     }
@@ -59,7 +74,7 @@ class Config
      *
      * @return string
      */
-    public static function getProjectRoot()
+    public function getProjectRoot()
     {
         return __DIR__ . '/../../../../..';
     }
@@ -69,70 +84,29 @@ class Config
      *
      * @return array
      */
-    protected static function recursiveParse($data)
+    protected function parse($data)
     {
         $result_array = [];
-        if (is_array($data)) {
-            foreach ($data as $key => $value) {
-                if (is_array($value)) {
-                    $data[$key] = self::recursiveParse($value);
-                }
-                $x = explode('.', $key);
-                if (!empty($x[1])) {
-                    $x = array_reverse($x, true);
-                    if (isset($result_array[$key])) {
-                        unset($result_array[$key]);
-                    }
-                    if (!isset($result_array[$x[0]])) {
-                        $result_array[$x[0]] = [];
-                    }
-                    $first = true;
-                    foreach ($x as $k => $v) {
-                        if ($first === true) {
-                            $b = $data[$key];
-                            $first = false;
-                        }
-                        $b = [$v => $b];
-                    }
-                    $result_array[$x[0]] = array_merge_recursive($result_array[$x[0]], $b[$x[0]]);
-                } else {
-                    $result_array[$key] = $data[$key];
-                }
-            }
+
+        foreach ($data as $key => $value) {
+            $tmp_result_array = [];
+            $parts_of_key = explode('.', $key);
+            $this->setValue($tmp_result_array, $parts_of_key, $value);
+            $result_array = array_merge_recursive($result_array, $tmp_result_array);
         }
+
         return $result_array;
     }
 
-    protected static function parseIniAdvanced($data)
+    protected function setValue(array &$result_array, array $parts_of_key, $value)
     {
-        $result_array = [];
-        if (is_array($data)) {
-            foreach ($data as $key => $value) {
-                $e = explode(':', $key);
-                if (!empty($e[1])) {
-                    $x = [];
-                    foreach ($e as $tk => $tv) {
-                        $x[$tk] = trim($tv);
-                    }
-                    $x = array_reverse($x, true);
-                    foreach ($x as $k => $v) {
-                        $c = $x[0];
-                        if (empty($result_array[$c])) {
-                            $result_array[$c] = [];
-                        }
-                        if (isset($result_array[$x[1]])) {
-                            $result_array[$c] = array_merge($result_array[$c], $result_array[$x[1]]);
-                        }
-                        if ($k === 0) {
-                            $result_array[$c] = array_merge($result_array[$c], $data[$key]);
-                        }
-                    }
-                } else {
-                    $result_array[$key] = $data[$key];
-                }
-            }
+        $part = array_shift($parts_of_key);
+        $result_array[$part] = [];
+        if (count($parts_of_key) === 0){
+            $result_array[$part] = $value;
+            return;
         }
-        return $result_array;
+        $this->setValue($result_array[$part], $parts_of_key, $value);
     }
 
     /**

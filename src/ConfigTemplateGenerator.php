@@ -1,26 +1,35 @@
 <?php
+
+namespace ConfigOfProject;
+
 /**
- * Created by PhpStorm.
- * User: Ivan
- * Date: 27.11.2015
- * Time: 13:41
+ * Класс необходимый для генерации шаблона конфига.
+ * Это особенно полезно когда в корневом проекте у вас собираются конфиги из десятков проектов
+ *
+ * Для формирования данного шаблона включите в композере выполнения скрипта:
+ *
+ * "scripts": {
+ *     "post-autoload-dump": [
+ *         "\\ConfigOfProject\\ConfigTemplateGenerator::generate",
+ *     ]
+ * },
+ * Class ConfigTemplateGenerator
  */
-
-namespace MivarUtils\Common;
-
 class ConfigTemplateGenerator
 {
-    const NAME_OF_SECTION = 'mivar-configuration';
+    const NAME_OF_SECTION = 'additional-configuration';
 
+    /**
+     * @return string
+     */
     protected static function getPath()
     {
-        return __DIR__ . '/../../../../../config/configuration.ini.template';
+        return __DIR__ . '/../../../../../config/template';
     }
 
     /**
      * @param \Composer\Script\Event $event
-     *
-     * @return void
+     * @throws Exception
      */
     public static function generate(\Composer\Script\Event $event)
     {
@@ -71,9 +80,9 @@ class ConfigTemplateGenerator
             $prev_first_section = $first_section;
         }
 
-        $configAbsoluteFilePath = \MivarUtils\Common\ConfigTemplateGenerator::getPath();
-        if (file_put_contents($configAbsoluteFilePath, join(PHP_EOL, $result)) === false) {
-            throw new \LogicException("Не удалось записать шаблон файла конфигурации: ".$configAbsoluteFilePath);
+        $config_absolute_file_path = \ConfigOfProject\ConfigTemplateGenerator::getPath();
+        if (file_put_contents($config_absolute_file_path, join(PHP_EOL, $result)) === false) {
+            throw new \ConfigOfProject\Exception("Не удалось записать шаблон файла конфигурации: ".$config_absolute_file_path);
         }
     }
 }
