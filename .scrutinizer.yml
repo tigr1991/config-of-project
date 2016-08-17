@@ -33,3 +33,11 @@ tools:
     php_cpd:
         enabled: true
         excluded_dirs: [vendor, tests]
+
+build:
+    tests:
+        override:
+                command: 'phpunit --coverage-clover=conf'
+                coverage:
+                    file: 'conf'
+                    format: 'clover'
