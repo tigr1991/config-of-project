@@ -1,0 +1,29 @@
+{
+  "name": "tigr1991/config-of-project",
+  "description": "Проект для удобного управления конфигами",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "license": "proprietary",
+  "version": "0.0.1",
+  "authors": [
+    {
+      "name": "Ivan Iakovenko",
+      "homepage": "http://cv.totome.ru/",
+      "email": "iakovenko-bmstu@yandex.ru",
+      "role": "Developer"
+    }
+  ],
+  "require-dev": {
+    "phpunit/phpunit": "4.8.*"
+  },
+  "repositories": [
+  ],
+  "autoload": {
+    "psr-4": {
+      "ConfigOfProject\\": "src/",
+      "ConfigOfProjectTests\\": "tests/"
+    }
+  },
+  "scripts": {
+  }
+}
