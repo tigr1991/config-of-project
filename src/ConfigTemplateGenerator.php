@@ -19,6 +19,8 @@ class ConfigTemplateGenerator
 {
     const NAME_OF_SECTION = 'additional-configuration';
 
+    protected static $pattern = [];
+
     /**
      * @return string
      */
@@ -29,6 +31,7 @@ class ConfigTemplateGenerator
 
     /**
      * @param \Composer\Script\Event $event
+     *
      * @throws Exception
      */
     public static function generate(\Composer\Script\Event $event)
@@ -80,9 +83,20 @@ class ConfigTemplateGenerator
             $prev_first_section = $first_section;
         }
 
-        $config_absolute_file_path = \ConfigOfProject\ConfigTemplateGenerator::getPath();
-        if (file_put_contents($config_absolute_file_path, join(PHP_EOL, $result)) === false) {
-            throw new \ConfigOfProject\Exception("Не удалось записать шаблон файла конфигурации: ".$config_absolute_file_path);
+        static::$pattern = $result;
+        static::saveTemplate($result);
+    }
+
+    /**
+     * @param string $data
+     *
+     * @throws Exception
+     */
+    protected static function saveTemplate($data)
+    {
+        $config_absolute_file_path = static::getPath();
+        if (@file_put_contents($config_absolute_file_path, join(PHP_EOL, $data)) === false) {
+            throw new \ConfigOfProject\Exception("Не удалось записать шаблон файла конфигурации: " . $config_absolute_file_path);
         }
     }
 }
