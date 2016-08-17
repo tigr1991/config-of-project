@@ -8,7 +8,9 @@
 
 namespace ConfigOfProject;
 
-
+/**
+ * Class Exception
+ */
 class Exception extends \Exception
 {
 

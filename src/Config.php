@@ -3,7 +3,7 @@
 namespace ConfigOfProject;
 
 /**
- * Основной файл конфигурации. Точка входа.
+ * Основной класс конфигурации. Точка входа.
  *
  * Class Config
  */
@@ -13,6 +13,7 @@ class Config
     const LOCAL_PATH_TO_CONFIG = '/config/';
     const DEFAULT_FILE = 'config.ini';
 
+    /** @var mixed Многомерный массив, уровень вложенности зависит от конфигурации */
     protected static $instances = [];
 
 
@@ -37,7 +38,7 @@ class Config
      *
      * @param string $file
      *
-     * @return array
+     * @return mixed Многомерный массив, уровень вложенности зависит от конфигурации
      * @throws Exception
      */
     public function getConfig($file = self::DEFAULT_FILE)
@@ -80,9 +81,9 @@ class Config
     }
 
     /**
-     * @param mixed $data
+     * @param string[] $data
      *
-     * @return array
+     * @return mixed Многомерный массив, уровень вложенности зависит от конфигурации
      */
     protected function parse($data)
     {
@@ -98,11 +99,16 @@ class Config
         return $result_array;
     }
 
+    /**
+     * @param mixed $result_array Многомерный массив, уровень вложенности зависит от конфигурации
+     * @param string[] $parts_of_key
+     * @param string $value
+     */
     protected function setValue(array &$result_array, array $parts_of_key, $value)
     {
         $part = array_shift($parts_of_key);
         $result_array[$part] = [];
-        if (count($parts_of_key) === 0){
+        if (count($parts_of_key) === 0) {
             $result_array[$part] = $value;
             return;
         }
@@ -110,24 +116,26 @@ class Config
     }
 
     /**
+     * Пример: host=cv.totome.ru dbname=stand user=tigr1991 password=qwerty port=666
+     *
      * @param string $host
-     * @param string $dbname
+     * @param string $db_name
      * @param string $user
      * @param string $password
      *
      * @return string
      */
-    public static function buildConnectionString($host, $dbname, $user = null, $password = null, $port = null)
+    public static function buildConnectionString($host, $db_name, $user = null, $password = null, $port = null)
     {
         assert(is_string($host));
-        assert(is_string($dbname));
+        assert(is_string($db_name));
         assert(is_string($user) || is_null($port));
         assert(is_string($password) || is_null($port));
         assert(is_string($port) || is_null($port));
 
         $data = [
             'host' => $host,
-            'dbname' => $dbname,
+            'dbname' => $db_name,
             'user' => $user,
             'password' => $password,
             'port' => $port,
@@ -144,18 +152,20 @@ class Config
     }
 
     /**
+     * Пример: http://tigr1991:qwerty@cv.totome.ru:666/stand
+     *
      * @param string $protocol
      * @param string $user
      * @param string $password
      * @param string $host
      * @param string $port
-     * @param string $dbname
+     * @param string $db_name
      *
      * @return string
      */
-    public static function buildConnectionUrl($protocol, $user, $password, $host, $port, $dbname)
+    public static function buildConnectionUrl($protocol, $user, $password, $host, $port, $db_name)
     {
-        return "$protocol://$user:$password@$host:$port/$dbname";
+        return "$protocol://$user:$password@$host:$port/$db_name";
     }
 
 }
